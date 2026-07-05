@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Liar's Dice AI — teaching deck</title>
+<style>
+  :root{
+    --bg:#0e1122; --ink:#eef1ff; --muted:#a3abd0; --accent:#6c8cff;
+    --accent2:#39d98a; --bad:#ff6b6b; --card:#191d33; --line:#2c335c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+       background:radial-gradient(1200px 700px at 75% -10%,#1c2350,#0e1122);
+       color:var(--ink);overflow:hidden}
+  .deck{height:100vh;width:100vw;position:relative}
+  .slide{position:absolute;inset:0;display:none;flex-direction:column;
+         justify-content:center;padding:6vh 8vw;animation:fade .35s ease}
+  .slide.active{display:flex}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .kicker{color:var(--accent);font-weight:700;letter-spacing:2px;text-transform:uppercase;
+          font-size:14px;margin-bottom:14px}
+  h1{font-size:44px;line-height:1.1;margin-bottom:18px}
+  h2{font-size:34px;line-height:1.15;margin-bottom:22px}
+  p,li{font-size:20px;line-height:1.6;color:var(--muted)}
+  .lead{font-size:23px;color:var(--ink);max-width:60ch}
+  strong{color:var(--ink)}
+  .grid{display:grid;gap:16px;margin-top:12px}
+  .cols-2{grid-template-columns:1fr 1fr}
+  .cols-3{grid-template-columns:repeat(3,1fr)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px}
+  .card h3{font-size:19px;margin-bottom:8px;color:var(--ink)}
+  .card p{font-size:16px}
+  .pill{display:inline-block;background:#20264a;border:1px solid var(--line);border-radius:999px;
+        padding:5px 13px;font-size:14px;color:var(--ink);margin:4px 6px 0 0}
+  .accent{color:var(--accent)} .green{color:var(--accent2)} .red{color:var(--bad)}
+  table{border-collapse:collapse;margin-top:10px;width:100%;max-width:760px}
+  td{padding:9px 14px;border-bottom:1px solid var(--line);font-size:18px}
+  td:first-child{color:var(--accent);font-weight:700;white-space:nowrap;width:150px}
+  td:last-child{color:var(--muted)}
+  .flow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;
+       font-size:16px;text-align:center}
+  .box b{display:block;color:var(--ink);font-size:17px}
+  .box span{font-size:13px;color:var(--muted)}
+  .arrow{color:var(--accent);font-size:24px}
+  .curve{margin-top:14px;max-width:560px;border-radius:12px;border:1px solid var(--line)}
+  code{font-family:ui-monospace,Menlo,monospace;background:#20264a;padding:2px 7px;border-radius:6px;
+       color:#cdd6ff;font-size:.92em}
+  .steps li{margin-bottom:10px}
+  .foot{position:absolute;bottom:22px;left:8vw;right:8vw;display:flex;justify-content:space-between;
+        align-items:center;color:var(--muted);font-size:14px}
+  .dots{display:flex;gap:8px}
+  .dot{width:9px;height:9px;border-radius:50%;background:#39406e}
+  .dot.on{background:var(--accent)}
+  .nav{color:var(--muted);font-size:13px}
+  .big{font-size:30px;color:var(--ink);font-weight:700}
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <!-- SLIDE 1 — What is the game -->
+  <section class="slide active">
+    <div class="kicker">Industry Case Study · Reinforcement Learning</div>
+    <h1>🎲 Liar's Dice — an AI that teaches <span class="accent">itself</span> to bluff</h1>
+    <p class="lead">Liar's Dice is a <strong>bluffing game of hidden information</strong>. We build an AI that starts knowing <strong>nothing</strong> and learns to play — and bluff — purely by playing against itself.</p>
+    <div class="grid cols-2" style="margin-top:26px">
+      <div class="card">
+        <h3>The rules (2 players, 2 dice each)</h3>
+        <p>1. Each player secretly rolls 2 dice.<br>
+           2. Take turns making a <strong>bid</strong> — a claim about <em>all 4 dice</em>, e.g. <span class="accent">"three fours"</span> = "there are ≥3 fours on the table".<br>
+           3. Each bid must be <strong>higher</strong> than the last.<br>
+           4. Or shout <span class="red">"LIAR!"</span> to challenge. Reveal the dice: if the bid was true, the challenger loses — if it was a bluff, the bidder loses.</p>
+      </div>
+      <div class="card">
+        <h3>Why it's a great AI problem</h3>
+        <p>You <strong>can't see</strong> the opponent's dice. So every move is a <strong>decision under uncertainty</strong>: do I raise (maybe bluffing), or call their bluff? That is exactly the kind of problem reinforcement learning is built for — the same family as Poker.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 2 — ML vs DL vs RL -->
+  <section class="slide">
+    <div class="kicker">The concept</div>
+    <h2>ML vs DL vs RL — where does this fit?</h2>
+    <div class="grid cols-3">
+      <div class="card">
+        <h3>🧩 Machine Learning</h3>
+        <p>Learn patterns <strong>from data / examples</strong>. You show it labelled examples ("this is spam / not spam").</p>
+      </div>
+      <div class="card">
+        <h3>🧠 Deep Learning</h3>
+        <p>ML done with <strong>neural networks</strong> — many layers that learn their own features. Great for images, text, audio.</p>
+      </div>
+      <div class="card" style="border-color:var(--accent)">
+        <h3 class="accent">🎯 Reinforcement Learning</h3>
+        <p>No labelled answers. An <strong>agent tries actions</strong>, gets a <strong>reward</strong>, and learns by trial and error what leads to winning.</p>
+      </div>
+    </div>
+    <p class="big" style="margin-top:28px">We combine the last two → <span class="accent">Deep Reinforcement Learning</span></p>
+    <p class="lead">A <strong>neural network</strong> (deep learning) is the brain, trained by <strong>reward from playing</strong> (reinforcement learning). No human ever tells it the right move.</p>
+  </section>
+
+  <!-- SLIDE 3 — RL components mapped to the game -->
+  <section class="slide">
+    <div class="kicker">How RL works</div>
+    <h2>The pieces of RL — mapped onto our game</h2>
+    <table>
+      <tr><td>Agent</td><td>the AI player (a small neural network)</td></tr>
+      <tr><td>Environment</td><td>the dice game + the opponent</td></tr>
+      <tr><td>State</td><td>my 2 dice + the bids made so far</td></tr>
+      <tr><td>Action</td><td>raise the bid, or call <span class="red">"LIAR!"</span></td></tr>
+      <tr><td>Reward</td><td><span class="green">+1</span> if the agent wins the round, <span class="red">−1</span> if it loses</td></tr>
+      <tr><td>Policy</td><td>the learned strategy: given a state → which action</td></tr>
+      <tr><td>Self-play</td><td>the agent plays <strong>itself</strong> thousands of times and improves</td></tr>
+    </table>
+    <p class="lead" style="margin-top:20px">The loop: <span class="accent">act → see who won → make winning moves more likely, losing moves less likely → repeat.</span> That single idea (the <em>REINFORCE</em> algorithm) is the whole engine.</p>
+  </section>
+
+  <!-- SLIDE 4 — How we build it -->
+  <section class="slide">
+    <div class="kicker">How we build it</div>
+    <h2>The build — five small Python files</h2>
+    <div class="flow">
+      <div class="box"><b>game.py</b><span>the rules</span></div>
+      <span class="arrow">→</span>
+      <div class="box"><b>model.py</b><span>neural net (PyTorch)</span></div>
+      <span class="arrow">→</span>
+      <div class="box"><b>train.py</b><span>self-play loop</span></div>
+      <span class="arrow">→</span>
+      <div class="box"><b>model.pt</b><span>the trained brain</span></div>
+      <span class="arrow">→</span>
+      <div class="box"><b>app.py</b><span>play in browser</span></div>
+    </div>
+    <div class="grid cols-2" style="margin-top:20px">
+      <div>
+        <p><strong>The learning, in one line:</strong></p>
+        <p style="margin-top:8px">The network plays <strong>60,000 games against itself</strong> on a laptop CPU in about <strong>30 seconds</strong>. We test it against a random player as it learns:</p>
+        <div style="margin-top:12px">
+          <span class="pill">start: worse than random</span>
+          <span class="pill">after training: <span class="green">~93% win-rate</span></span>
+        </div>
+        <p style="margin-top:14px;font-size:16px">Run it yourself: <code>python train.py</code></p>
+      </div>
+      <div>
+        <img class="curve" src="training_curve.png" alt="win-rate climbing during self-play training">
+        <p style="font-size:14px;margin-top:6px">It literally learns to bluff and to catch bluffs — no strategy was ever programmed in.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 5 — Demo + recap -->
+  <section class="slide">
+    <div class="kicker">Live demo</div>
+    <h2>Let's play the AI we just trained</h2>
+    <div class="grid cols-2">
+      <div class="card">
+        <h3>Run it</h3>
+        <p style="line-height:2">
+          <code>pip install torch matplotlib</code><br>
+          <code>python train.py</code> &nbsp;— trains the model<br>
+          <code>python app.py</code> &nbsp;— starts the game<br>
+          open <code>http://localhost:8000</code>
+        </p>
+        <p style="margin-top:10px;font-size:15px">The browser shows the dice, your legal bids, and a live <span class="accent">"what the AI is thinking"</span> panel with its probabilities.</p>
+      </div>
+      <div class="card">
+        <h3>What to take away</h3>
+        <p>• <strong>Deep RL = neural network + reward.</strong><br>
+           • <strong>Self-play</strong> creates a training partner out of thin air.<br>
+           • With the <span class="red">right reward</span> and <span class="accent">enough games</span>, an agent discovers strategy — even <em>bluffing</em> — on its own.<br>
+           • The same recipe scales up to Chess, Go, Poker and beyond.</p>
+      </div>
+    </div>
+    <p class="lead" style="margin-top:22px">🎲 Your move — can you out-bluff a network that has played 60,000 games?</p>
+  </section>
+
+  <div class="foot">
+    <div class="nav">← → arrow keys to navigate</div>
+    <div class="dots" id="dots"></div>
+    <div class="nav" id="counter">1 / 5</div>
+  </div>
+</div>
+
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  const dots=document.getElementById('dots');
+  slides.forEach((_,i)=>{const d=document.createElement('div');d.className='dot'+(i===0?' on':'');d.onclick=()=>go(i);dots.appendChild(d);});
+  let cur=0;
+  function go(i){
+    cur=Math.max(0,Math.min(slides.length-1,i));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===cur));
+    [...dots.children].forEach((d,k)=>d.classList.toggle('on',k===cur));
+    document.getElementById('counter').textContent=(cur+1)+' / '+slides.length;
+  }
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key===' ')go(cur+1);
+    if(e.key==='ArrowLeft')go(cur-1);
+  });
+</script>
+</body>
+</html>

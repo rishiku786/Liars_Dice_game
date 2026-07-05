@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Liar's Dice — play the AI</title>
+<style>
+  :root{
+    --bg:#0f1220; --panel:#191d33; --panel2:#20264a; --ink:#eef1ff;
+    --muted:#9aa3c7; --accent:#6c8cff; --good:#39d98a; --bad:#ff6b6b;
+    --pip:#0f1220; --die:#f5f6ff; --line:#2c335c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+       background:radial-gradient(1200px 700px at 70% -10%,#1b2145,#0f1220);color:var(--ink);
+       min-height:100vh;padding:24px}
+  .wrap{max-width:820px;margin:0 auto}
+  h1{font-size:26px;margin:0 0 4px;letter-spacing:.3px}
+  .sub{color:var(--muted);margin:0 0 20px;font-size:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;
+        padding:18px 20px;margin-bottom:16px}
+  .row{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+  .spread{justify-content:space-between}
+  button{cursor:pointer;border:none;border-radius:10px;font-weight:600;font-size:14px;
+         padding:10px 14px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);
+         transition:transform .05s ease,background .15s ease}
+  button:hover{background:#2a3160}
+  button:active{transform:translateY(1px)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .primary{background:var(--accent);border-color:var(--accent)}
+  .primary:hover{background:#5578ff}
+  .liar{background:var(--bad);border-color:var(--bad);font-size:15px;padding:12px 20px}
+  .liar:hover{background:#ff5252}
+  .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+  /* dice */
+  .dice{display:flex;gap:12px}
+  .die{width:56px;height:56px;background:var(--die);border-radius:12px;
+       display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);padding:8px;
+       box-shadow:0 4px 14px rgba(0,0,0,.35)}
+  .die span{width:9px;height:9px;background:var(--pip);border-radius:50%;align-self:center;justify-self:center}
+  /* pip positions in a 3x3 grid: cells 1..9 */
+  .p1{grid-area:1/1}.p2{grid-area:1/3}.p3{grid-area:2/1}.p4{grid-area:2/2}
+  .p5{grid-area:2/3}.p6{grid-area:3/1}.p7{grid-area:3/3}
+  .bid-pill{display:inline-block;background:var(--panel2);border:1px solid var(--line);
+            border-radius:999px;padding:8px 16px;font-weight:700;font-size:16px}
+  .bids{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .thinking{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:var(--muted)}
+  .bar{height:8px;background:var(--panel2);border-radius:6px;overflow:hidden;margin-top:3px}
+  .bar>i{display:block;height:100%;background:var(--accent)}
+  .log{max-height:150px;overflow:auto;font-size:13px;color:var(--muted);line-height:1.7}
+  .result{font-size:20px;font-weight:800;text-align:center;padding:6px}
+  .win{color:var(--good)} .lose{color:var(--bad)}
+  .hint{color:var(--muted);font-size:13px;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎲 Liar's Dice — you vs. the self-taught AI</h1>
+  <p class="sub">The AI learned this game from scratch by playing itself 60,000 times. Can you out-bluff it?</p>
+
+  <div class="card row spread">
+    <div>
+      <div class="label">Your secret dice</div>
+      <div class="dice" id="yourDice"></div>
+    </div>
+    <div style="text-align:right">
+      <div class="label">Current bid on the table</div>
+      <div id="bidBox"><span class="bid-pill">— none yet —</span></div>
+    </div>
+  </div>
+
+  <div class="card" id="turnCard">
+    <div class="label">Your move</div>
+    <div id="moveArea">
+      <button class="primary" onclick="newGame()">Start a game</button>
+    </div>
+    <div class="hint" id="hint">A bid means “there are at least this many of that face across ALL 4 dice.” You can only raise the bid — or call the AI's bluff.</div>
+  </div>
+
+  <div class="card">
+    <div class="label">🧠 What the AI is thinking</div>
+    <div class="thinking" id="thinking">Start a game to see the AI's reasoning.</div>
+  </div>
+
+  <div class="card">
+    <div class="row spread">
+      <div class="label" style="margin:0">Game log</div>
+      <button onclick="newGame()">New game</button>
+    </div>
+    <div class="log" id="log" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<script>
+// pip layout for each die face 1..6 (which of the 7 pip slots are on)
+const PIPS = {1:[4],2:[1,7],3:[1,4,7],4:[1,2,6,7],5:[1,2,4,6,7],6:[1,2,3,5,6,7]};
+function dieEl(face){
+  const d=document.createElement('div'); d.className='die';
+  for(const p of PIPS[face]){const s=document.createElement('span');s.className='p'+p;d.appendChild(s);}
+  return d;
+}
+function renderDice(el,arr){el.innerHTML='';arr.forEach(f=>el.appendChild(dieEl(f)));}
+
+async function post(url,body){
+  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
+  return r.json();
+}
+async function newGame(){ render(await post('/api/new',{})); }
+async function move(action){ render(await post('/api/move',{action})); }
+
+function render(s){
+  renderDice(document.getElementById('yourDice'), s.your_dice);
+  // current bid
+  document.getElementById('bidBox').innerHTML = s.last_bid
+    ? `<span class="bid-pill">${s.last_bid.name}</span>` : `<span class="bid-pill">— none yet —</span>`;
+
+  // AI thinking panel
+  const t=document.getElementById('thinking');
+  if(s.ai_thinking && s.ai_thinking.length){
+    t.innerHTML = s.ai_thinking.map(o=>
+      `<div style="margin-bottom:6px">${o.action.padEnd(9)} — ${o.prob}%<div class="bar"><i style="width:${o.prob}%"></i></div></div>`
+    ).join('');
+  }
+
+  // log
+  document.getElementById('log').innerHTML = s.log.map(l=>`<div>${l}</div>`).join('');
+
+  // move area
+  const area=document.getElementById('moveArea');
+  const hint=document.getElementById('hint');
+  if(s.over){
+    const youWon = s.winner==='you';
+    area.innerHTML =
+      `<div class="result ${youWon?'win':'lose'}">${youWon?'🎉 You win!':'🤖 The AI wins!'}</div>`+
+      `<div class="row" style="justify-content:center;margin:10px 0"><div><div class="label" style="text-align:center">AI's hidden dice were</div><div class="dice" id="aiDice"></div></div></div>`+
+      `<div style="text-align:center"><button class="primary" onclick="newGame()">Play again</button></div>`;
+    renderDice(document.getElementById('aiDice'), s.ai_dice);
+    hint.textContent='';
+    return;
+  }
+  if(s.your_turn){
+    const bids = s.legal.filter(a=>a.id!==s.liar_id);
+    let html = `<div class="bids">` + bids.map(a=>`<button onclick="move(${a.id})">${a.name}</button>`).join('') + `</div>`;
+    if(s.legal.some(a=>a.id===s.liar_id)){
+      html += `<div style="margin-top:14px"><button class="liar" onclick="move(${s.liar_id})">🚨 Call LIAR!</button></div>`;
+    }
+    area.innerHTML = html;
+    hint.textContent = s.last_bid
+      ? 'Raise the bid, or call LIAR if you think the AI is bluffing.'
+      : 'You go first — make any opening bid.';
+  } else {
+    area.innerHTML = `<div class="thinking">The AI is thinking…</div>`;
+  }
+}
+</script>
+</body>
+</html>
